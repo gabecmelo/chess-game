@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Xadrez</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container my-5">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">Jogo de Xadrez</h3>
+                        <div id="turn-indicator" class="d-flex align-items-center">
+                            <span id="current-turn" class="me-2">Vez das brancas</span>
+                            <div id="turn-color" class="turn-indicator-white"></div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="chessboard" class="chessboard"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow">
+                    <div class="card-header bg-dark text-white">
+                        <h4 class="mb-0">Status do Jogo</h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="game-status" class="alert alert-info">
+                            Jogo em andamento
+                        </div>
+                        <div class="mb-3">
+                            <h5>Peças Capturadas</h5>
+                            <div class="d-flex mb-2">
+                                <div class="me-2"><i class="fas fa-chess-pawn text-dark"></i> Brancas:</div>
+                                <div id="white-captured" class="captured-pieces"></div>
+                            </div>
+                            <div class="d-flex">
+                                <div class="me-2"><i class="fas fa-chess-pawn"></i> Pretas:</div>
+                                <div id="black-captured" class="captured-pieces"></div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <h5>Histórico de Jogadas</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Brancas</th>
+                                            <th>Pretas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="move-history">
+                                        <!-- O histórico de jogadas será preenchido aqui -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <button id="reset-game" class="btn btn-primary w-100">
+                            <i class="fas fa-redo-alt me-2"></i>Novo Jogo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
+
