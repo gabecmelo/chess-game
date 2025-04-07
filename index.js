@@ -19,6 +19,7 @@ const gameState = {
     black: { kingSide: true, queenSide: true },
   },
   enPassantTarget: null,
+  pendingPromotion: null,
 }
 
 const pieces = {
@@ -119,15 +120,15 @@ function handleSquareClick(event) {
     const selectedRow = gameState.selectedPiece.row
     const selectedCol = gameState.selectedPiece.col
 
-
+  
     const validMove = gameState.validMoves.find((move) => move.row === row && move.col === col)
 
     if (validMove) {
-
+    
       makeMove(selectedRow, selectedCol, row, col, validMove.special)
       clearSelection()
     } else {
-
+    
       const piece = gameState.board[row][col]
       if (piece && piece.color === gameState.currentPlayer) {
         selectPiece(row, col)
@@ -136,7 +137,7 @@ function handleSquareClick(event) {
       }
     }
   } else {
-
+  
     const piece = gameState.board[row][col]
     if (piece && piece.color === gameState.currentPlayer) {
       selectPiece(row, col)
@@ -183,38 +184,90 @@ function makeMove(fromRow, fromCol, toRow, toCol, special = null) {
   const targetPiece = gameState.board[toRow][toCol]
 
 
+  if (piece.type === "pawn" && (toRow === 0 || toRow === 7)) {
+  
+    gameState.pendingPromotion = {
+      fromRow,
+      fromCol,
+      toRow,
+      toCol,
+      special,
+      targetPiece,
+    }
+
+    showPromotionModal(piece.color)
+    return
+  }
+
+  completeMove(fromRow, fromCol, toRow, toCol, special, targetPiece)
+}
+
+function completeMove(fromRow, fromCol, toRow, toCol, special = null, targetPiece = null) {
+  const piece = gameState.board[fromRow][fromCol]
+
+  if (targetPiece === null) {
+    targetPiece = gameState.board[toRow][toCol]
+  }
+
   if (targetPiece) {
     gameState.capturedPieces[targetPiece.color].push(targetPiece)
     updateCapturedPieces()
   }
 
-
   gameState.board[toRow][toCol] = piece
   gameState.board[fromRow][fromCol] = null
 
-
   piece.hasMoved = true
 
-
   handleSpecialMoves(piece, fromRow, fromCol, toRow, toCol, special)
-
 
   if (piece.type === "king") {
     gameState.kings[piece.color] = { row: toRow, col: toCol }
   }
 
-
   recordMove(piece, fromRow, fromCol, toRow, toCol, targetPiece, special)
-
 
   gameState.currentPlayer = gameState.currentPlayer === "white" ? "black" : "white"
   updateTurnIndicator()
 
-
   checkGameStatus()
 
-
   createChessboard()
+}
+
+function showPromotionModal(pieceColor) {
+  const modal = document.getElementById("promotion-modal")
+  const promotionPieces = document.querySelectorAll(".promotion-piece")
+
+  promotionPieces.forEach((pieceElement) => {
+    const icon = pieceElement.querySelector("i")
+    if (pieceColor === "white") {
+      icon.classList.add("text-light")
+      pieceElement.style.color = "#000"
+    } else {
+      icon.classList.remove("text-light")
+      pieceElement.style.color = "#000"
+    }
+
+    pieceElement.onclick = () => handlePromotionSelection(pieceElement.dataset.piece)
+  })
+
+  modal.style.display = "flex"
+}
+
+function handlePromotionSelection(pieceType) {
+  const modal = document.getElementById("promotion-modal")
+  const { fromRow, fromCol, toRow, toCol, special, targetPiece } = gameState.pendingPromotion
+
+  const piece = gameState.board[fromRow][fromCol]
+
+  piece.type = pieceType
+
+  modal.style.display = "none"
+
+  completeMove(fromRow, fromCol, toRow, toCol, special, targetPiece)
+
+  gameState.pendingPromotion = null
 }
 
 function handleSpecialMoves(piece, fromRow, fromCol, toRow, toCol, special) {
@@ -224,23 +277,20 @@ function handleSpecialMoves(piece, fromRow, fromCol, toRow, toCol, special) {
     const rookCol = isKingSide ? 7 : 0
     const newRookCol = isKingSide ? toCol - 1 : toCol + 1
 
-
+  
     const rook = gameState.board[fromRow][rookCol]
     gameState.board[fromRow][newRookCol] = rook
     gameState.board[fromRow][rookCol] = null
   }
 
-
   if (piece.type === "pawn" && special === "enPassant") {
     const captureRow = fromRow
     const captureCol = toCol
-
-
+  
     const capturedPawn = gameState.board[captureRow][captureCol]
     gameState.capturedPieces[capturedPawn.color].push(capturedPawn)
     gameState.board[captureRow][captureCol] = null
   }
-
 
   gameState.enPassantTarget = null
   if (piece.type === "pawn" && Math.abs(fromRow - toRow) === 2) {
@@ -250,23 +300,15 @@ function handleSpecialMoves(piece, fromRow, fromCol, toRow, toCol, special) {
     }
   }
 
-
-  if (piece.type === "pawn" && (toRow === 0 || toRow === 7)) {
-
-
-    piece.type = "queen"
-  }
-
-
   if (piece.type === "king") {
     gameState.castlingRights[piece.color].kingSide = false
     gameState.castlingRights[piece.color].queenSide = false
   } else if (piece.type === "rook") {
     if (fromCol === 0) {
-
+    
       gameState.castlingRights[piece.color].queenSide = false
     } else if (fromCol === 7) {
-
+    
       gameState.castlingRights[piece.color].kingSide = false
     }
   }
@@ -299,7 +341,6 @@ function getValidMoves(row, col) {
       break
   }
 
-
   return moves.filter((move) => !wouldBeInCheck(row, col, move.row, move.col, piece.color))
 }
 
@@ -307,17 +348,14 @@ function wouldBeInCheck(fromRow, fromCol, toRow, toCol, color) {
 
   const tempBoard = JSON.parse(JSON.stringify(gameState.board))
 
-
   const piece = tempBoard[fromRow][fromCol]
   tempBoard[toRow][toCol] = piece
   tempBoard[fromRow][fromCol] = null
-
 
   let kingPos = { ...gameState.kings[color] }
   if (piece.type === "king") {
     kingPos = { row: toRow, col: toCol }
   }
-
 
   const opponentColor = color === "white" ? "black" : "white"
 
@@ -362,14 +400,12 @@ function getPawnMoves(row, col, piece) {
   if (isInBounds(row + direction, col) && !gameState.board[row + direction][col]) {
     moves.push({ row: row + direction, col: col })
 
-
     if ((piece.color === "white" && row === 6) || (piece.color === "black" && row === 1)) {
       if (!gameState.board[row + 2 * direction][col]) {
         moves.push({ row: row + 2 * direction, col: col })
       }
     }
   }
-
 
   for (const colOffset of [-1, 1]) {
     const newCol = col + colOffset
@@ -378,11 +414,10 @@ function getPawnMoves(row, col, piece) {
     if (isInBounds(newRow, newCol)) {
       const targetPiece = gameState.board[newRow][newCol]
 
-
+    
       if (targetPiece && targetPiece.color !== piece.color) {
         moves.push({ row: newRow, col: newCol })
       }
-
 
       if (
         gameState.enPassantTarget &&
@@ -404,7 +439,6 @@ function getPawnMoves(row, col, piece) {
 function getPawnAttacks(row, col, piece, board) {
   const attacks = []
   const direction = piece.color === "white" ? -1 : 1
-
 
   for (const colOffset of [-1, 1]) {
     const newCol = col + colOffset
@@ -493,7 +527,6 @@ function getKingMoves(row, col, piece) {
     [1, 1],
   ]
 
-
   for (const [rowOffset, colOffset] of offsets) {
     const newRow = row + rowOffset
     const newCol = col + colOffset
@@ -506,10 +539,8 @@ function getKingMoves(row, col, piece) {
     }
   }
 
-
   if (!piece.hasMoved && !gameState.inCheck) {
     const castlingRights = gameState.castlingRights[piece.color]
-
 
     if (
       castlingRights.kingSide &&
@@ -524,7 +555,6 @@ function getKingMoves(row, col, piece) {
         moves.push({ row, col: col + 2, special: "castleKing" })
       }
     }
-
 
     if (
       castlingRights.queenSide &&
@@ -545,7 +575,7 @@ function getKingMoves(row, col, piece) {
   return moves
 }
 
-function getKingAttacks(row, col, piece, board) {
+function getKingAttacks(row, col) {
   const attacks = []
   const offsets = [
     [-1, -1],
@@ -569,8 +599,6 @@ function getKingAttacks(row, col, piece, board) {
 
   return attacks
 }
-
-
 
 function getSlidingMoves(row, col, piece, directions, board) {
   const moves = []
@@ -642,26 +670,24 @@ function checkGameStatus() {
     if (hasLegalMoves) break
   }
 
-
   const statusElement = document.getElementById("game-status")
 
   if (!hasLegalMoves) {
     gameState.gameOver = true
     if (gameState.inCheck) {
-
+    
       statusElement.className = "alert alert-danger"
       statusElement.textContent = `Xeque-mate! ${gameState.currentPlayer === "white" ? "Pretas" : "Brancas"} vencem!`
     } else {
-
+    
       statusElement.className = "alert alert-warning"
       statusElement.textContent = "Empate por afogamento!"
     }
   } else if (gameState.inCheck) {
-
+  
     statusElement.className = "alert alert-warning"
     statusElement.textContent = `${gameState.currentPlayer === "white" ? "Brancas" : "Pretas"} estão em xeque!`
-
-
+  
     const kingSquare = document.querySelector(`.square[data-row="${kingPos.row}"][data-col="${kingPos.col}"]`)
     kingSquare.classList.add("check")
   } else {
@@ -699,17 +725,12 @@ function recordMove(piece, fromRow, fromCol, toRow, toCol, capturedPiece, specia
     notation += piece.type.charAt(0).toUpperCase()
   }
 
-
-
-
-
   if (capturedPiece) {
     if (piece.type === "pawn") {
       notation += files[fromCol]
     }
     notation += "x"
   }
-
 
   notation += files[toCol] + ranks[toRow]
 
@@ -720,15 +741,12 @@ function recordMove(piece, fromRow, fromCol, toRow, toCol, capturedPiece, specia
     notation = "O-O-O"
   }
 
-
   const opponentColor = piece.color === "white" ? "black" : "white"
   const opponentKingPos = gameState.kings[opponentColor]
-
 
   const tempBoard = JSON.parse(JSON.stringify(gameState.board))
   tempBoard[toRow][toCol] = piece
   tempBoard[fromRow][fromCol] = null
-
 
   let isCheck = false
   for (let r = 0; r < 8; r++) {
@@ -748,7 +766,6 @@ function recordMove(piece, fromRow, fromCol, toRow, toCol, capturedPiece, specia
   if (isCheck) {
     notation += "+"
   }
-
 
   const moveNumber = Math.floor(gameState.moveHistory.length / 2) + 1
   const moveHistoryTable = document.getElementById("move-history")
@@ -795,15 +812,13 @@ function resetGame() {
     black: { kingSide: true, queenSide: true },
   }
   gameState.enPassantTarget = null
-
+  gameState.pendingPromotion = null
 
   createChessboard()
   updateTurnIndicator()
   updateCapturedPieces()
 
-
   document.getElementById("move-history").innerHTML = ""
-
 
   const statusElement = document.getElementById("game-status")
   statusElement.className = "alert alert-info"
@@ -815,7 +830,5 @@ document.addEventListener("DOMContentLoaded", () => {
   createChessboard()
   updateTurnIndicator()
 
-
   document.getElementById("reset-game").addEventListener("click", resetGame)
 })
-
