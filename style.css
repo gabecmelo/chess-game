@@ -17,7 +17,6 @@
   position: relative;
   cursor: pointer;
   font-size: calc(12px + 2vw);
-  max-font-size: 40px;
   transition: background-color 0.2s;
 }
 
